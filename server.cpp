@@ -14,20 +14,6 @@
 #include <cstring>
 
 
-void broadcast (char *message, int message_length, int sender, fd_set *master, int max_socket)
-{
-	std::cout << message << std::endl;
-	for (int i = 1; i <= max_socket; ++i)
-	{
-		if (FD_ISSET(i, master))
-		{
-			if (i == sender)
-				continue;
-			else
-				send(i, message, message_length, 0);
-		}
-	}
-}
 
 int main (int ac, char **av) 
 {
@@ -120,7 +106,15 @@ int main (int ac, char **av)
 					{
 						if (FD_ISSET(j, &writes))
 							if (j != socket_listen)
-								send(j, message, strlen(message), 0);
+							{
+								int begin = 0;
+								int bytes_sent = 0;
+								while (bytes_sent < strlen(message))
+								{
+									bytes_sent = send(j, message + begin, strlen(message) - begin, 0);
+									begin += bytes_sent;
+								}
+							}
 					}
 				}
 				else // socket_client
