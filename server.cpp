@@ -11,6 +11,21 @@
 #include <iostream>
 
 
+void broadcast (char *message, int message_length, int sender, fd_set *master, int max_socket)
+{
+	std::cout << message << std::endl;
+	for (int i = 1; i <= max_socket; ++i)
+	{
+		if (FD_ISSET(i, master))
+		{
+			if (i == sender)
+				continue;
+			else
+				send(i, message, message_length, 0);
+		}
+	}
+}
+
 int main (int ac, char **av) 
 {
 	if (ac < 2 )
@@ -59,7 +74,7 @@ int main (int ac, char **av)
 	int max_socket = socket_listen;
 
 	std::cout << "waiting for connections..." << std::endl;
-	while (1)
+	while (true)
 	{
 		fd_set reads;
 		fd_set writes;
@@ -86,9 +101,7 @@ int main (int ac, char **av)
 					}
 					FD_SET(socket_client, &master);
 					if (socket_client > max_socket)
-					{
 						max_socket = socket_client;
-					}
 					char address_buffer[100];
 					getnameinfo((struct sockaddr*)&client_address, client_len, address_buffer, sizeof(address_buffer), 0, 0, NI_NUMERICHOST);
 					std::cout << "new connection from " << address_buffer << std::endl;
@@ -103,48 +116,44 @@ int main (int ac, char **av)
 						close(i);
 						continue;
 					}
-					std::cout << message << std::endl;
-				}
-			}
-			if(FD_ISSET(i, &writes))
-			{
-				if (i == socket_listen)
-				{
-					continue;
-				}
-				else
-				{
-					char message[1024];
-					std::cin >> message;
-					int bytes_sent = send(i, message, strlen(message), 0);
-					if (bytes_sent < 1)
+					broadcast(message, bytes_received, i, &master, max_socket);
+					for (int j = 1; j <= max_socket; ++j)
 					{
-						FD_CLR(i, &master);
-						close(i);
-						continue;
+						if (FD_ISSET(j, &master))
+						{
+							if (j == socket_listen || j == i)
+								continue;
+							else
+								send(j, message, bytes_received, 0);
+						}
 					}
 				}
 			}
-
 		}
+		// for (int i = 1; i <= max_socket; ++i)
+		// {
+		// 	if (FD_ISSET(i, &writes))
+		// 	{
+		// 		if (i == socket_listen)
+		// 			continue;
+		// 		else
+		// 		{
+		// 			char message[1024];
+		// 			std::cin.getline(message, 1024);
+		// 			int bytes_sent = send(i, message, strlen(message), 0);
+		// 			if (bytes_sent < 1)
+		// 			{
+		// 				FD_CLR(i, &master);
+		// 				close(i);
+		// 				continue;
+		// 			}
+		// 		}
+		// 	}
+		// }
 	}
 	std::cout << "closing listening socket..." << std::endl;
 	close(socket_listen);
 	std::cout << "finished." << std::endl;
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
