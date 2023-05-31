@@ -43,12 +43,17 @@ public:
 	const int &getSocketListen() const;
 	const int &getMaxSocket() const;
 	const fd_set &getSets(int i) const;
+
+
+	//undone
+	void createDatabase();
 	
 private:
 	int _socket_listen;
 	int _max_socket;
 	fd_set _sets[3];
-	std::map<int ,std::string> _users; // <ip, name>
+	std::map<int ,std::string> _users; // <socketId, name>
+	std::map<std::string, std::string> _users_db; // <name, password>
 };
 
 

@@ -20,7 +20,7 @@ void Server::setupSocket(char *port)
 	hints.ai_flags = AI_PASSIVE; // listen on socket
 	
 	struct addrinfo *bind_address;
-	getaddrinfo(0, port, &hints, &bind_address);
+	int slience = getaddrinfo(0, port, &hints, &bind_address); // just to silence unused variable warning
 
 	//creatng socket
  	_socket_listen = socket(bind_address->ai_family, bind_address->ai_socktype, bind_address->ai_protocol);
@@ -149,7 +149,7 @@ void Server::sendMessage(char *name)
 	char message[1024];
 	std::cin.getline(message, 1024);
 	char formatted_message[2048];
-	sprintf(formatted_message, "\033[33m%s: %s\033[0m\n", name, message);
+	sprintf(formatted_message, "%s: %s\n", name, message);
 	for (int j = 1; j <= _max_socket; ++j)
 	{
 		if (FD_ISSET(j, &_sets[WRITE]))
