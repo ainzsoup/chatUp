@@ -1,28 +1,18 @@
-#include <cstdio>
-#include <cstring>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/wait.h>
+#include "server.hpp"
 #include <unistd.h>
-#include <errno.h>
-#include <stdio.h>
-#include <string.h>
-#include <iostream>
-#include <cstring>
 
 
-
-int main (int ac, char **av) 
+Server::Server()
 {
-	if (ac < 2 )
-	{
-		std::cerr << "Usage: " << av[0] << " port" << std::endl;
-		return 1;
-	}
-	std::cout << "configuring local address..." << std::endl;
+}
+
+Server::~Server()
+{
+}
+
+void Server::setupSocket(char *port)
+{
+	//configuring local address
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET; // IPv4
@@ -30,119 +20,160 @@ int main (int ac, char **av)
 	hints.ai_flags = AI_PASSIVE; // listen on socket
 	
 	struct addrinfo *bind_address;
-	getaddrinfo(0, av[1], &hints, &bind_address);
+	getaddrinfo(0, port, &hints, &bind_address);
 
- 	std::cout << "creating socket..." << std::endl;
- 	int socket_listen;
-	socket_listen = socket(bind_address->ai_family, bind_address->ai_socktype, bind_address->ai_protocol);
-	if (socket_listen < 0) 
-	{
-		std::cerr << "socket() failed. (" << errno << ")" << std::endl;
-		return 1;
-	}
+	//creatng socket
+ 	_socket_listen = socket(bind_address->ai_family, bind_address->ai_socktype, bind_address->ai_protocol);
+	if (_socket_listen < 0) 
+		throw std::runtime_error("socket() failed");
 
-
-	std::cout << "binding socket to local address..." << std::endl;
-	if (bind(socket_listen, bind_address->ai_addr, bind_address->ai_addrlen)) 
-	{
-		std::cerr << "bind() failed. (" << errno << ")" << std::endl;
-		return 1;
-	}
+	//binding socket to local bind_address
+	if (bind(_socket_listen, bind_address->ai_addr, bind_address->ai_addrlen)) 
+		throw std::runtime_error("bind() failed");
 	freeaddrinfo(bind_address);
 
-	std::cout << "listening..." << std::endl;
-	if (listen(socket_listen, 10) < 0) 
+	//listening
+	if (listen(_socket_listen, 10) < 0) 
+		throw std::runtime_error("listen() failed");
+
+	FD_ZERO(&_sets[MASTER]);
+	FD_SET(_socket_listen, &_sets[MASTER]);
+	FD_SET(0, &_sets[MASTER]);
+	_max_socket = _socket_listen;
+}
+
+void Server::getReadyDescriptors(int timeout_sec, int timeout_usec)
+{
+	_sets[READ] = _sets[MASTER];
+	_sets[WRITE] = _sets[MASTER];
+	struct timeval tv;
+	tv.tv_sec = timeout_sec;
+	tv.tv_usec = timeout_usec;
+
+	if (select(_max_socket + 1, &_sets[READ], &_sets[WRITE], 0, &tv) < 0) 
+		throw std::runtime_error("select() failed");
+}
+
+const int &Server::getSocketListen() const
+{
+	return _socket_listen;
+}
+
+const int &Server::getMaxSocket() const
+{
+	return _max_socket;
+} 
+
+const fd_set &Server::getSets(int i) const
+{
+	return _sets[i];
+}
+
+void Server::acceptConnection()
+{
+	struct sockaddr_storage client_address;
+	socklen_t client_len = sizeof(client_address);
+	int socket_client = accept(_socket_listen, (struct sockaddr*) &client_address, &client_len);
+	if (socket_client < 0) 
+		throw std::runtime_error("accept() failed");
+	FD_SET(socket_client, &_sets[MASTER]);
+	if (socket_client > _max_socket)
+		_max_socket = socket_client;
+	char address_buffer[100];
+	getnameinfo((struct sockaddr*)&client_address, client_len, address_buffer, sizeof(address_buffer), 0, 0, NI_NUMERICHOST);
+	std::cout << "New connection from " << address_buffer << std::endl;
+}
+
+void Server::receiveMessage(int sender)
+{
+	char read[1024];
+	int bytes_received = recv(sender, read, 1024, 0);
+	if (bytes_received < 1)
 	{
-		std::cerr << "listen() failed. (" << errno << ")" << std::endl;
+		close(sender);
+		FD_CLR(sender, &_sets[MASTER]);
+		return;
+	}
+	bytes_received = bytes_received > 1024 ? 1024 : bytes_received;
+	read[bytes_received] = '\0';
+	std::cout << "nc: " << read; 
+	broadcastMessage(sender, read, bytes_received);
+}
+
+void Server::broadcastMessage(int sender, char *read, int bytes_received)
+{
+	for (int j = 1; j <= _max_socket; ++j)
+	{
+		if (FD_ISSET(j, &_sets[MASTER]))
+		{
+			if (j == _socket_listen || j == sender || j == STDIN_FILENO)
+				continue;
+			else
+				send(j, read, bytes_received, 0);
+		}
+	}
+}
+
+void Server::sendMessage(char *name)
+{
+	char message[1024];
+	std::cin.getline(message, 1024);
+	char formatted_message[2048];
+	sprintf(formatted_message, "%s: %s\n", name, message);
+	for (int j = 1; j <= _max_socket; ++j)
+	{
+		if (FD_ISSET(j, &_sets[WRITE]))
+			if (j != _socket_listen)
+			{
+				int begin = 0;
+				int bytes_sent = 0;
+				while (bytes_sent < strlen(formatted_message))
+				{
+					bytes_sent = send(j, formatted_message + begin, strlen(formatted_message) - begin, 0);
+					begin += bytes_sent;
+				}
+			}
+	}
+}
+
+int main(int ac, char **av)
+{
+	if (ac < 3)
+	{
+		std::cerr << "Usage: " << av[0] << " port name" << std::endl;
 		return 1;
 	}
-
-	fd_set master;
-	FD_ZERO(&master);
-	FD_SET(socket_listen, &master);
-	FD_SET(0, &master);
-	int max_socket = socket_listen;
-
-	std::cout << "waiting for connections..." << std::endl;
-	while (true)
+	Server server;
+	try
 	{
-		fd_set reads;
-		fd_set writes;
-		reads = master;
-		writes = master;
-		if (select(max_socket+1, &reads, &writes, 0, 0) < 0) 
+		server.setupSocket(av[1]);
+		std::cout << "waiting for connections..." << std::endl;	
+		while(true)
 		{
-			std::cerr << "select() failed. (" << errno << ")" << std::endl;
-			return 1;
-		}
-		for (int i = 0; i <= max_socket; ++i)
-		{
-			if (FD_ISSET(i, &reads))
+			usleep(100);
+			server.getReadyDescriptors(0, 0);
+			for (int i = 0; i <= server.getMaxSocket(); ++i)
 			{
-				if (i == socket_listen) // new connection
+				if (FD_ISSET(i, &server.getSets(READ)))
 				{
-					struct sockaddr_storage client_address;
-					socklen_t client_len = sizeof(client_address);
-					int socket_client = accept(socket_listen, (struct sockaddr*) &client_address, &client_len);
-
-					if (socket_client < 0) 
-					{
-						std::cerr << "accept() failed. (" << errno << ")" << std::endl;
-						return 1;
-					}
-					FD_SET(socket_client, &master);
-					if (socket_client > max_socket)
-						max_socket = socket_client;
-					char address_buffer[100];
-					getnameinfo((struct sockaddr*)&client_address, client_len, address_buffer, sizeof(address_buffer), 0, 0, NI_NUMERICHOST);
-					std::cout << "new connection from " << address_buffer << std::endl;
-				}
-				else if (i == 0) // stdin
-				{
-					char message[1024];
-					std::cin.getline(message, 1024);
-					strcat(message, "\n");
-					for (int j = 1; j <= max_socket; ++j)
-					{
-						if (FD_ISSET(j, &writes))
-							if (j != socket_listen)
-							{
-								int begin = 0;
-								int bytes_sent = 0;
-								while (bytes_sent < strlen(message))
-								{
-									bytes_sent = send(j, message + begin, strlen(message) - begin, 0);
-									begin += bytes_sent;
-								}
-							}
-					}
-				}
-				else // socket_client
-				{
-					char message[1024];
-					int bytes_received = recv(i, message, 1024, 0);
-					if (bytes_received < 1)
-					{
-						FD_CLR(i, &master);
-						close(i);
-						continue;
-					}
-					std::cout << "recv: " << message ;
-					for (int j = 1; j <= max_socket; ++j)
-					{
-						if (FD_ISSET(j, &master))
-						{
-							if (j != socket_listen && j != i)
-								send(j, message, bytes_received, 0);
-						}
-					}
+					if (i == server.getSocketListen()) // new connection
+						server.acceptConnection();
+					else if (i == STDIN_FILENO) // server input
+						server.sendMessage(av[2]);
+					else // client message
+						server.receiveMessage(i);
 				}
 			}
 		}
 	}
-	std::cout << "closing listening socket..." << std::endl;
-	close(socket_listen);
-	std::cout << "finished." << std::endl;
+	catch (std::exception &e)
+	{
+		std::cerr << e.what() << std::endl;
+		return 1;
+	}
+	std::cout << "quitting..." << std::endl;
+	close(server.getSocketListen());
 	return 0;
 }
+
 
