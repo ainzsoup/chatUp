@@ -69,6 +69,30 @@ const fd_set &Server::getSets(int i) const
 	return _sets[i];
 }
 
+void Server::sendWelcomeMessage(int i)
+{
+	std::string msg = "Welcome to the chat!\n Please enter your name:";
+	send(i, msg.c_str(), msg.size() + 1, 0);
+}
+
+void Server::getClientName(int i)
+{
+	sendWelcomeMessage(i);
+	char name[1024];
+	int bytes_received = recv(i, name, 1024, 0);
+	if (bytes_received < 1)
+	{
+		close(i);
+		FD_CLR(i, &_sets[MASTER]);
+		return;
+	}
+	bytes_received = bytes_received > 1024 ? 1024 : bytes_received;
+	name[bytes_received] = '\0';
+	if (bytes_received > 0 && name[bytes_received - 1] == '\n')
+			name[bytes_received - 1] = '\0';
+	_users[i] = name;
+}
+
 void Server::acceptConnection()
 {
 	struct sockaddr_storage client_address;
@@ -82,6 +106,8 @@ void Server::acceptConnection()
 	char address_buffer[100];
 	getnameinfo((struct sockaddr*)&client_address, client_len, address_buffer, sizeof(address_buffer), 0, 0, NI_NUMERICHOST);
 	std::cout << "New connection from " << address_buffer << std::endl;
+	_users[socket_client] = "guest";
+	getClientName(socket_client);
 }
 
 void Server::receiveMessage(int sender)
@@ -96,20 +122,24 @@ void Server::receiveMessage(int sender)
 	}
 	bytes_received = bytes_received > 1024 ? 1024 : bytes_received;
 	read[bytes_received] = '\0';
-	std::cout << "nc: " << read; 
+	if (bytes_received > 0 && read[bytes_received - 1] == '\n')
+			read[bytes_received - 1] = '\0';
+	std::cout << "\033[32m" << _users[sender] << ": " << read << "\033[0m" << std::endl;
 	broadcastMessage(sender, read, bytes_received);
 }
 
 void Server::broadcastMessage(int sender, char *read, int bytes_received)
 {
+	char message[2048];
+    sprintf(message, "\033[32m%s: %s\033[0m\n", _users[sender].c_str(), read);
 	for (int j = 1; j <= _max_socket; ++j)
 	{
 		if (FD_ISSET(j, &_sets[MASTER]))
 		{
-			if (j == _socket_listen || j == sender || j == STDIN_FILENO)
+			if (j == _socket_listen || j == sender) // don't send to listener and sender
 				continue;
 			else
-				send(j, read, bytes_received, 0);
+				send(j, message, strlen(message), 0);
 		}
 	}
 }
@@ -119,7 +149,7 @@ void Server::sendMessage(char *name)
 	char message[1024];
 	std::cin.getline(message, 1024);
 	char formatted_message[2048];
-	sprintf(formatted_message, "%s: %s\n", name, message);
+	sprintf(formatted_message, "\033[33m%s: %s\033[0m\n", name, message);
 	for (int j = 1; j <= _max_socket; ++j)
 	{
 		if (FD_ISSET(j, &_sets[WRITE]))
