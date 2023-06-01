@@ -121,7 +121,7 @@ void Server::broadcastMessage(int sender, char *read, int bytes_received)
 	{
 		if (FD_ISSET(j, &_sets[MASTER]))
 		{
-			if (j == _socket_listen || j == sender) // don't send to listener and sender
+			if (j == _socket_listen || j == sender || _clients[j].getStatus() == EXPECTING_NAME) // don't send to listener or sender or to client that hasn't entered name yet
 				continue;
 			else
 				send(j, message, strlen(message), 0);
@@ -154,7 +154,7 @@ void Server::sendMessage(char *name)
 void Server::announce(std::string msg)
 {
 	char message[2048];
-	sprintf(message, "\033[37m%s\033[0m\n", msg.c_str()); //gray 
+	sprintf(message, "\033[32m%s\033[0m\n", msg.c_str()); // green
 	for (int j = 1; j <= _max_socket; ++j)
 	{
 		if (FD_ISSET(j, &_sets[WRITE]))
@@ -173,14 +173,14 @@ void Server::announce(std::string msg)
 
 void Server::parseName(std::string name)
 {
-	if (name.size() < 1 || name.size() > 20)
-		throw "Name must be between 1 and 20 characters long\n";
-	for (int i = 0; i < name.size(); ++i)
-		if (!isalnum(name[i]))
-			throw "Name must contain only alphanumeric characters\n";
-	for (std::map<int, Client>::iterator it = _clients.begin(); it != _clients.end(); ++it)
-		if (it->second.getName() == name)
-			throw "Name already taken\n";
+    if (name.size() < 1 || name.size() > 20)
+        throw "\033[31mName must be between 1 and 20 characters :( try Again\n\033[0mName:";
+    for (int i = 0; i < name.size(); ++i)
+        if (!isalnum(name[i]))
+            throw "\033[31mName must be alphanumeric :( try Again\n\033[0mName:";
+    for (std::map<int, Client>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+        if (it->second.getName() == name)
+            throw "\033[31mName already taken :( try Again\n\033[0mName:";
 }
 
 int Server::getClientName(int client)
@@ -207,7 +207,7 @@ int Server::getClientName(int client)
 		return 1;
 	}
 	_clients[client].setName(name);
-	std::cout << "\033[32m" << _clients[client].getName() << " has joined the chat!\033[0m" << std::endl;
+	announce (_clients[client].getName() + " has joined the chat!");
 	return 0;
 }
 
