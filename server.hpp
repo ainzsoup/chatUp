@@ -18,6 +18,8 @@
 #include <cstring>
 #include <map>
 #include <vector>
+#include <sqlite3.h>
+
 
 enum 
 {
@@ -56,5 +58,26 @@ private:
 	std::map<std::string, std::string> _users_db; // <name, password>
 };
 
-
-
+// WIP
+class Client 
+{
+public:
+	Client(char *ip, char *port);
+	~Client();
+	void login();
+	void registerUser();
+	void connectToServer();
+	void receiveMessage();
+	void sendMessage();
+	void getReadyDescriptors(int timeout_sec, int timeout_usec);
+	const int &getSocket() const;
+	const fd_set &getSets(int i) const;
+private:
+	Client();
+	int _socket;
+	std::string _name;
+	std::string _password;
+	char *_ip;
+	char *_port;
+	fd_set _sets[3];
+};
