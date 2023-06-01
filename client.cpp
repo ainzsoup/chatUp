@@ -1,29 +1,32 @@
 #include "server.hpp"
-
-client::client(int socket) : _socket(socket), _status(EXPECTING_NAME)
+Client::Client()
 {
 }
 
-client::~client()
+Client::Client(int socket) : _socket(socket), _status(EXPECTING_NAME)
 {
 }
 
-void client::setName(std::string name)
+Client::~Client()
+{
+}
+
+void Client::setName(std::string name)
 {
 	_name = name;
 }
 
-const std::string &client::getName() const
+const std::string &Client::getName() const
 {
 	return _name;
 }
 
-void client::setStatus(int status)
+void Client::setStatus(int status)
 {
 	_status = status;
 }
 
-const int &client::getStatus() const
+const int &Client::getStatus() const
 {
 	return _status;
 }

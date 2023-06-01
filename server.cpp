@@ -171,6 +171,18 @@ void Server::announce(std::string msg)
 	}
 }
 
+void Server::parseName(std::string name)
+{
+	if (name.size() < 1 || name.size() > 20)
+		throw "Name must be between 1 and 20 characters long\n";
+	for (int i = 0; i < name.size(); ++i)
+		if (!isalnum(name[i]))
+			throw "Name must contain only alphanumeric characters\n";
+	for (std::map<int, Client>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+		if (it->second.getName() == name)
+			throw "Name already taken\n";
+}
+
 int Server::getClientName(int client)
 {
 	char name[1024];
@@ -180,15 +192,23 @@ int Server::getClientName(int client)
 		close(client);
 		FD_CLR(client, &_sets[MASTER]);
 		_clients.erase(client);
-		return 0;
+		return 1;
 	}
 	bytes_received = bytes_received > 1024 ? 1024 : bytes_received;
 	name[bytes_received] = '\0';
 	if (bytes_received > 0 && name[bytes_received - 1] == '\n')
 			name[bytes_received - 1] = '\0';
+	try {
+		parseName(name);
+	}
+	catch (const char *error)
+	{
+		send (client, error, strlen(error), 0);
+		return 1;
+	}
 	_clients[client].setName(name);
 	std::cout << "\033[32m" << _clients[client].getName() << " has joined the chat!\033[0m" << std::endl;
-	return 1;
+	return 0;
 }
 
 void Server::handleClient(int client)
@@ -199,14 +219,11 @@ void Server::handleClient(int client)
 			receiveMessage(client);
 			break;
 		case EXPECTING_NAME:
-			if (getClientName(client))
+			if (!getClientName(client))
 			{
 				_clients[client].setStatus(CONNECTED);
 				send(client, "Welcome to the chat!\n", 21, 0);
-				
-
 			}
-
 			break;
 	}
 }

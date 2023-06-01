@@ -37,6 +37,7 @@ enum status
 class Client
 {
 public:
+	Client();
 	Client(int socket);
  	~Client();
 	void setName(std::string name);
@@ -46,7 +47,6 @@ public:
 	
 	
 private:
-	Client();
 	int _socket;
 	std::string _name;
 	int _status;
@@ -68,6 +68,7 @@ public:
 	void handleClient(int client);
 	void announce(std::string msg);
 	int getClientName(int client);
+	void parseName(std::string name);
 	const int &getSocketListen() const;
 	const int &getMaxSocket() const;
 	const fd_set &getSets(int i) const;
