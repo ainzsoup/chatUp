@@ -21,11 +21,35 @@
 #include <sqlite3.h>
 
 
-enum 
+enum sets 
 {
 	MASTER,
 	READ,
 	WRITE,
+};
+
+enum status
+{
+	CONNECTED,
+	EXPECTING_NAME,
+};
+
+class Client
+{
+public:
+	Client(int socket);
+ 	~Client();
+	void setName(std::string name);
+	const std::string &getName() const;
+	void setStatus(int status);
+	const int &getStatus() const;
+	
+	
+private:
+	Client();
+	int _socket;
+	std::string _name;
+	int _status;
 };
 
 class Server
@@ -41,7 +65,9 @@ public:
 	void sendMessage(char *name);
 	void broadcastMessage(int sender , char *msg, int bytes_received);
 	void sendWelcomeMessage(int i);
-	void getClientName(int i);
+	void handleClient(int client);
+	void announce(std::string msg);
+	int getClientName(int client);
 	const int &getSocketListen() const;
 	const int &getMaxSocket() const;
 	const fd_set &getSets(int i) const;
@@ -54,30 +80,7 @@ private:
 	int _socket_listen;
 	int _max_socket;
 	fd_set _sets[3];
-	std::map<int ,std::string> _users; // <socketId, name>
-	std::map<std::string, std::string> _users_db; // <name, password>
+	std::map<int ,Client> _clients; // <socketId, client>
 };
 
-// WIP
-class Client 
-{
-public:
-	Client(char *ip, char *port);
-	~Client();
-	void login();
-	void registerUser();
-	void connectToServer();
-	void receiveMessage();
-	void sendMessage();
-	void getReadyDescriptors(int timeout_sec, int timeout_usec);
-	const int &getSocket() const;
-	const fd_set &getSets(int i) const;
-private:
-	Client();
-	int _socket;
-	std::string _name;
-	std::string _password;
-	char *_ip;
-	char *_port;
-	fd_set _sets[3];
-};
+

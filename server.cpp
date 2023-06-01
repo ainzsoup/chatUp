@@ -75,23 +75,6 @@ void Server::sendWelcomeMessage(int i)
 	send(i, msg.c_str(), msg.size() + 1, 0);
 }
 
-void Server::getClientName(int i)
-{
-	sendWelcomeMessage(i);
-	char name[1024];
-	int bytes_received = recv(i, name, 1024, 0);
-	if (bytes_received < 1)
-	{
-		close(i);
-		FD_CLR(i, &_sets[MASTER]);
-		return;
-	}
-	bytes_received = bytes_received > 1024 ? 1024 : bytes_received;
-	name[bytes_received] = '\0';
-	if (bytes_received > 0 && name[bytes_received - 1] == '\n')
-			name[bytes_received - 1] = '\0';
-	_users[i] = name;
-}
 
 void Server::acceptConnection()
 {
@@ -106,8 +89,9 @@ void Server::acceptConnection()
 	char address_buffer[100];
 	getnameinfo((struct sockaddr*)&client_address, client_len, address_buffer, sizeof(address_buffer), 0, 0, NI_NUMERICHOST);
 	std::cout << "New connection from " << address_buffer << std::endl;
-	_users[socket_client] = "guest";
-	getClientName(socket_client);
+	Client new_client(socket_client);
+	_clients[socket_client] = new_client;
+	sendWelcomeMessage(socket_client);
 }
 
 void Server::receiveMessage(int sender)
@@ -118,20 +102,21 @@ void Server::receiveMessage(int sender)
 	{
 		close(sender);
 		FD_CLR(sender, &_sets[MASTER]);
+		_clients.erase(sender);
 		return;
 	}
 	bytes_received = bytes_received > 1024 ? 1024 : bytes_received;
 	read[bytes_received] = '\0';
 	if (bytes_received > 0 && read[bytes_received - 1] == '\n')
 			read[bytes_received - 1] = '\0';
-	std::cout << "\033[32m" << _users[sender] << ": " << read << "\033[0m" << std::endl;
+	std::cout << "\033[32m" << _clients[sender].getName() << ": " << read << "\033[0m" << std::endl;
 	broadcastMessage(sender, read, bytes_received);
 }
 
 void Server::broadcastMessage(int sender, char *read, int bytes_received)
 {
 	char message[2048];
-    sprintf(message, "\033[32m%s: %s\033[0m\n", _users[sender].c_str(), read);
+    sprintf(message, "\033[32m%s: %s\033[0m\n", _clients[sender].getName().c_str(), read);
 	for (int j = 1; j <= _max_socket; ++j)
 	{
 		if (FD_ISSET(j, &_sets[MASTER]))
@@ -166,6 +151,66 @@ void Server::sendMessage(char *name)
 	}
 }
 
+void Server::announce(std::string msg)
+{
+	char message[2048];
+	sprintf(message, "\033[37m%s\033[0m\n", msg.c_str()); //gray 
+	for (int j = 1; j <= _max_socket; ++j)
+	{
+		if (FD_ISSET(j, &_sets[WRITE]))
+			if (j != _socket_listen)
+			{
+				int begin = 0;
+				int bytes_sent = 0;
+				while (bytes_sent < strlen(message))
+				{
+					bytes_sent = send(j, message + begin, strlen(message) - begin, 0);
+					begin += bytes_sent;
+				}
+			}
+	}
+}
+
+int Server::getClientName(int client)
+{
+	char name[1024];
+	int bytes_received = recv(client, name, 1024, 0);
+	if (bytes_received < 1)
+	{
+		close(client);
+		FD_CLR(client, &_sets[MASTER]);
+		_clients.erase(client);
+		return 0;
+	}
+	bytes_received = bytes_received > 1024 ? 1024 : bytes_received;
+	name[bytes_received] = '\0';
+	if (bytes_received > 0 && name[bytes_received - 1] == '\n')
+			name[bytes_received - 1] = '\0';
+	_clients[client].setName(name);
+	std::cout << "\033[32m" << _clients[client].getName() << " has joined the chat!\033[0m" << std::endl;
+	return 1;
+}
+
+void Server::handleClient(int client)
+{
+	switch (_clients[client].getStatus())
+	{
+		case CONNECTED:
+			receiveMessage(client);
+			break;
+		case EXPECTING_NAME:
+			if (getClientName(client))
+			{
+				_clients[client].setStatus(CONNECTED);
+				send(client, "Welcome to the chat!\n", 21, 0);
+				
+
+			}
+
+			break;
+	}
+}
+
 int main(int ac, char **av)
 {
 	if (ac < 3)
@@ -191,7 +236,7 @@ int main(int ac, char **av)
 					else if (i == STDIN_FILENO) // server input
 						server.sendMessage(av[2]);
 					else // client message
-						server.receiveMessage(i);
+						server.handleClient(i);
 				}
 			}
 		}
