@@ -1,87 +1,86 @@
 #pragma once
+#include <arpa/inet.h>
 #include <cstdio>
 #include <cstring>
+#include <errno.h>
+#include <iostream>
+#include <map>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sqlite3.h>
+#include <stdio.h>
+#include <string.h>
 #include <string>
 #include <sys/_types/_fd_def.h>
 #include <sys/_types/_timeval.h>
-#include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <errno.h>
-#include <stdio.h>
-#include <string.h>
-#include <iostream>
-#include <cstring>
-#include <map>
 #include <vector>
-#include <sqlite3.h>
-
-
-enum sets 
-{
-	MASTER,
-	READ,
-	WRITE,
+#define HEADER                                                                 \
+    "_________ .__            __                \n\\_   ___ \\|  |__ _____ "   \
+    "_/  |_ __ ________  \n/    \\  \\/|  |  \\\\__  \\\\   __\\  |  \\____ "  \
+    "\\ \n\\     \\___|   Y  \\/ __ \\|  | |  |  /  |_> > \n \\______  /___| " \
+    " (____  /__| |____/|   __/ \n        \\/     \\/     \\/           |__| " \
+    "  \n"
+enum sets {
+    MASTER,
+    READ,
+    WRITE,
 };
 
-enum status
-{
-	CONNECTED,
-	EXPECTING_NAME,
+enum status {
+    CONNECTED,
+    EXPECTING_NAME,
 };
 
-class Client
-{
-public:
-	Client();
-	Client(int socket);
- 	~Client();
-	void setName(std::string name);
-	const std::string &getName() const;
-	void setStatus(int status);
-	const int &getStatus() const;
-	
-	
-private:
-	int _socket;
-	std::string _name;
-	int _status;
+class Client {
+  public:
+    Client();
+    Client(int socket);
+    ~Client();
+    void setName(std::string name);
+    const std::string &getName() const;
+    void setStatus(int status);
+    const int &getStatus() const;
+    std::string _color;
+    static std::vector<std::string> _colorsList;
+
+  private:
+    int _socket;
+    std::string _name;
+    int _status;
 };
 
-class Server
-{
-public:
-	Server();
-	~Server();
-	void setupSocket(char *port);
-	void run(int ac, char **av);
-	void getReadyDescriptors(int timeout_sec, int timeout_usec);
-	void acceptConnection();
-	void receiveMessage(int i);
-	void sendMessage(char *name);
-	void broadcastMessage(int sender , char *msg, int bytes_received);
-	void sendWelcomeMessage(int i);
-	void handleClient(int client);
-	void announce(std::string msg);
-	int getClientName(int client);
-	void parseName(std::string name);
-	const int &getSocketListen() const;
-	const int &getMaxSocket() const;
-	const fd_set &getSets(int i) const;
+class Server {
+  public:
+    Server(std::string name);
+    ~Server();
+    void setupSocket(char *port);
+    void run(int ac, char **av);
+    void getReadyDescriptors(int timeout_sec, int timeout_usec);
+    void acceptConnection();
+    void receiveMessage(int i);
+    void sendMessage();
+    void broadcastMessage(int sender, char *msg, int bytes_received);
+    void sendWelcomeMessage(int i);
+    void handleClient(int client);
+    void announce(std::string msg, int exclude);
+    int getClientName(int client);
+    void parseName(std::string name);
+    const int &getSocketListen() const;
+    const int &getMaxSocket() const;
+    const fd_set &getSets(int i) const;
+    const std::string &getName() const;
 
+    // undone
+    void createDatabase();
 
-	//undone
-	void createDatabase();
-	
-private:
-	int _socket_listen;
-	int _max_socket;
-	fd_set _sets[3];
-	std::map<int ,Client> _clients; // <socketId, client>
+  private:
+    std::string _name;
+    int _socket_listen;
+    int _max_socket;
+    fd_set _sets[3];
+    std::map<int, Client> _clients; // <socketId, client>
 };
-
-
