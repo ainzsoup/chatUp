@@ -1,4 +1,4 @@
-SRC = server.cpp client.cpp
+SRC = main.cpp server.cpp client.cpp
 OBJ = $(SRC:.cpp=.o)
 EXE = chatUp
 CPP = c++

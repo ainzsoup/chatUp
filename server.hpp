@@ -35,6 +35,21 @@ enum status {
     EXPECTING_NAME,
 };
 
+class Database {
+  public:
+	Database(std::string &name);
+	~Database();
+	void connectToDatabase();
+	void addUser(std::string &username, std::string &password);
+	std::string fetchPassword(std::string &username);
+	bool usernameTaken(std::string &username);
+
+  private:
+	Database();
+	sqlite3 *_db;
+};
+
+
 class Client {
   public:
     Client();
@@ -74,10 +89,8 @@ class Server {
     const fd_set &getSets(int i) const;
     const std::string &getName() const;
 
-    // undone
-    void createDatabase();
-
   private:
+	Database _db;
     std::string _name;
     int _socket_listen;
     int _max_socket;
