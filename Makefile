@@ -1,8 +1,8 @@
-SRC = main.cpp server.cpp client.cpp
+SRC = main.cpp server.cpp client.cpp database.cpp
 OBJ = $(SRC:.cpp=.o)
 EXE = chatUp
 CPP = c++
-CPPFLAGS =
+CPPFLAGS = -std=c++11 -lsqlite3
 RM = rm -f
 
 
