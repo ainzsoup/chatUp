@@ -104,12 +104,14 @@ void Server::receiveMessage(int sender) {
         _clients.erase(sender);
         return;
     }
+	if (bytes_received == 1 && read[0] == '\n')
+		return;
     bytes_received = bytes_received > 1024 ? 1024 : bytes_received;
     read[bytes_received] = '\0';
     if (bytes_received > 0 && read[bytes_received - 1] == '\n')
         read[bytes_received - 1] = '\0';
-    std::cout << "\033[32m" << _clients[sender].getName() << ": " << read
-              << "\033[0m" << std::endl;
+	std::cout << _clients[sender]._color << _clients[sender].getName()
+			  << ": " << read << "\033[0m" << std::endl;
     broadcastMessage(sender, read, bytes_received);
 }
 
