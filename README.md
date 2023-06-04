@@ -30,13 +30,31 @@ make
 ```
 3. run the application
 ```shell
-./Chatup <port_number> <name>
+./chatup <port_number> <name>
 ```
-the "name" will be used when the server sends messages in the chat.
 
 ## Usage
-Upon running the application, you will be prompted to register or log in. Follow the on-screen instructions to create an account or enter your credentials to log in. Once logged in, you can start sending and receiving messages in the chat.
+Run the server application usin the following command:
+```bash
+./chatUp <port> <server_name>
+```
+Replace "port" with the desired port number on which you want the server to listen for incoming connections.
+Replace "server_name" with a desired name that will show up to connected users in the chat when the server sends a message.
+Example: ./chatUp 5000 server
+Open another terminal window or tab (separate from the one running the server).
+In the new terminal, use the nc command to connect to the server. The command should be in the following format:
+```bash
+ nc <server_ip_address> <server_port>
+ ```
+ Replace <server_ip_address> with the IP address of the machine running the chat server and <server_port> with the port number specified when starting the server.
+ 
+Example: nc 192.168.0.100 5000
+ 
+After executing the nc command, you should be connected to the chat server. The application will prompt you to either register or log in.
 
+Follow the on-screen instructions to create a new account or enter your existing credentials to log in.
+
+Once logged in, you can start sending and receiving messages through the chat application.
 ## Database
 The application uses an SQLite database to store user information. The database file is named ChatUp.db and will be created automatically upon running the application. If you want to reset the database, you can use the following command:
 ```bash
