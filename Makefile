@@ -2,7 +2,8 @@ SRC = main.cpp server.cpp client.cpp database.cpp
 OBJ = $(SRC:.cpp=.o)
 EXE = chatUp
 CPP = c++
-CPPFLAGS = -std=c++11 -lsqlite3
+CPPFLAGS = -std=c++11 -lsqlite3 -I/Users/sgamraou/chatUp/path/include -L/Users/sgamraou/chatUp/path/lib -lsodium
+
 RM = rm -f
 
 

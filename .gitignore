@@ -1,3 +1,4 @@
 todo.txt
 .clang-format
 test/
+.clangd

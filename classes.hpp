@@ -18,6 +18,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
+// #include <crypt.h>
 #define HEADER                                                                                                         \
 	"_________ .__            __                \n\\_   ___ \\|  |__ _____ "                                           \
 	"_/  |_ __ ________  \n/    \\  \\/|  |  \\\\__  \\\\   __\\  |  \\____ "                                          \
