@@ -8,29 +8,6 @@ int main(int ac, char **av) {
 		return 1;
 	}
 	std::cout << HEADER << std::endl;
-	std::string password;
-
-	std::cout << "Enter password: ";
-	std::getline(std::cin, password);
-	char hashed_password[crypto_pwhash_STRBYTES];
-
-	if (crypto_pwhash_str(hashed_password, password.c_str(), password.length(), crypto_pwhash_OPSLIMIT_MIN,
-						  crypto_pwhash_MEMLIMIT_MIN) != 0) {
-		/* out of memory */
-	}
-	std::cout << "Password hashed: " << hashed_password << std::endl;
-	// Verify the password.
-	std::cout << "Enter password again: ";
-	std::getline(std::cin, password);
-
-	if (crypto_pwhash_str_verify(hashed_password, password.c_str(), password.length()) != 0) {
-		/* wrong password */
-		std::cerr << "Wrong password" << std::endl;
-		return 1;
-	}
-	std::cout << "Password verified" << std::endl;
-
-	// Print the hash.
 	Server server(av[2]);
 	try {
 		server.setupSocket(av[1]);

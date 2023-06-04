@@ -7,7 +7,7 @@ Database::Database(std::string name) {
 		sqlite3_close(_db);
 		throw std::runtime_error("Error opening SQLite database");
 	}
-	const char *createSQL = "CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT);";
+	const char *createSQL = "CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, passwordhash TEXT);";
 	if (sqlite3_exec(_db, createSQL, nullptr, nullptr, nullptr) != SQLITE_OK) {
 		sqlite3_close(_db);
 		throw std::runtime_error("Error creating table");
@@ -16,17 +16,23 @@ Database::Database(std::string name) {
 
 Database::~Database() {}
 
-void Database::addUser(std::string &username, std::string &password) {
-	std::string insertSQL = "INSERT INTO users (username, password) VALUES ('" + username + "', '" + password + "');";
+void Database::addUser(const std::string &username, std::string password) {
+
+	char hashed_password[crypto_pwhash_STRBYTES];
+	if (crypto_pwhash_str(hashed_password, password.c_str(), password.length(), crypto_pwhash_OPSLIMIT_MIN,
+						  crypto_pwhash_MEMLIMIT_MIN) != 0) {
+		throw std::runtime_error("Error hashing password");
+	}
+	std::string insertSQL = "INSERT INTO users (username, passwordhash) VALUES ('" + username + "', '" + hashed_password + "');";
 	if (sqlite3_exec(_db, insertSQL.c_str(), nullptr, nullptr, nullptr) != SQLITE_OK) {
 		sqlite3_close(_db);
 		throw std::runtime_error("Error adding user");
 	}
 }
 
-std::string Database::fetchPassword(std::string &username) {
+std::string Database::fetchHash(std::string username) {
 	std::string password;
-	std::string selectSQL = "SELECT password FROM users WHERE username = '" + username + "';";
+	std::string selectSQL = "SELECT passwordhash FROM users WHERE username = '" + username + "';";
 	rc = sqlite3_exec(
 		_db, selectSQL.c_str(),
 		[](void *data, int argc, char **argv, char **colName) {
@@ -48,7 +54,7 @@ std::string Database::fetchPassword(std::string &username) {
 
 void Database::close() { sqlite3_close(_db); }
 
-bool Database::userExists(std::string &username) {
+bool Database::userExists(std::string username) {
 	std::string selectSQL = "SELECT username FROM users WHERE username = '" + username + "';";
 	bool exists = false;
 	rc = sqlite3_exec(
@@ -68,17 +74,8 @@ bool Database::userExists(std::string &username) {
 	return exists;
 }
 
-// int main()
-// {
-// 	Database db("mydatabase.db");
-//
-// 	std::string username = "test";
-// 	std::string password = "passwordtest";
-//
-// 	db.addUser(username, password);
-//
-// 	std::cout << db.userExists(username) << std::endl;
-// 	std::cout << db.fetchPassword(username) << std::endl;
-// 	return 0;
-//
-// }
+bool Database::verifyPassword(const std::string &username, std::string password) {
+	std::string hashed_password = fetchHash(username);
+	return !crypto_pwhash_str_verify(hashed_password.c_str(), password.c_str(), password.length());
+}
+

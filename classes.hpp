@@ -18,7 +18,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
-// #include <crypt.h>
+#include <sodium.h>
 #define HEADER                                                                                                         \
 	"_________ .__            __                \n\\_   ___ \\|  |__ _____ "                                           \
 	"_/  |_ __ ________  \n/    \\  \\/|  |  \\\\__  \\\\   __\\  |  \\____ "                                          \
@@ -33,16 +33,21 @@ enum sets {
 
 enum status {
 	CONNECTED,
-	EXPECTING_NAME,
+	EXPECTING_LOGIN_NAME,
+	EXPECTING_PASSWORD,
+	EXPECTING_NEW_NAME,
+	EXPECTING_NEW_PASSWORD,
+	IN_MENU,
 };
 
 class Database {
   public:
 	Database(std::string name);
 	~Database();
-	void addUser(std::string &username, std::string &password);
-	std::string fetchPassword(std::string &username);
-	bool userExists(std::string &username);
+	void addUser(const std::string &username, std::string password);
+	std::string fetchHash(std::string username);
+	bool userExists(std::string username);
+	bool verifyPassword(const std::string &username, std::string password);
 	void close();
 
   private:
@@ -83,12 +88,16 @@ class Server {
 	void sendWelcomeMessage(int i);
 	void handleClient(int client);
 	void announce(std::string msg, int exclude);
-	int getClientName(int client);
 	void parseName(std::string name);
 	const int &getSocketListen() const;
 	const int &getMaxSocket() const;
 	const fd_set &getSets(int i) const;
 	const std::string &getName() const;
+	void get_client_option(int client);
+	int get_client_login_name(int client);
+	int get_client_new_name(int client);
+	int get_client_new_password(int client);
+	int get_client_password(int client);
 
   private:
 	Database _db;

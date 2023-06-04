@@ -20,5 +20,7 @@ clean:
 
 fclean: clean
 	$(RM) $(EXE)
+drop:
+	rm -rf ChatUp.db
 
 re: fclean all

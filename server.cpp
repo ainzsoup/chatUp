@@ -8,7 +8,7 @@
 
 #include "classes.hpp"
 
-Server::Server(std::string name) : _name(name), _db("ChatUpDB") {}
+Server::Server(std::string name) : _name(name), _db("ChatUp.db") {}
 
 Server::~Server() {}
 
@@ -62,13 +62,18 @@ const fd_set &Server::getSets(int i) const { return _sets[i]; }
 
 const std::string &Server::getName() const { return _name; }
 
-void Server::sendWelcomeMessage(int i) {
+void Server::sendWelcomeMessage(int client) {
 	std::string header = HEADER;
-	header.insert(0, "\033[34m"); // blue
+	header.insert(0, "\033[38;5;201m"); // blue
 	header.append("\033[0m\n");
-	send(i, header.c_str(), header.size() + 1, 0);
-	std::string msg = "Connection established.\nPlease enter your desired username:";
-	send(i, msg.c_str(), msg.size() + 1, 0);
+	send(client, header.c_str(), header.size() + 1, 0);
+	std::string menu = "Welcome to ChatUp!\n";
+	menu += "Please choose an option:\n";
+	menu += "1. Login\n";
+	menu += "2. Register\n";
+	menu += "3. Exit\n";
+	menu += "Enter the option number: \n";
+	send(client, menu.c_str(), menu.size() + 1, 0);
 }
 
 void Server::acceptConnection() {
@@ -113,11 +118,7 @@ void Server::broadcastMessage(int sender, char *read, int bytes_received) {
 	sprintf(message, "%s%s: %s\033[0m\n", _clients[sender]._color.c_str(), _clients[sender].getName().c_str(), read);
 	for (int j = 1; j <= _max_socket; ++j) {
 		if (FD_ISSET(j, &_sets[MASTER])) {
-			if (j == _socket_listen || j == sender ||
-				_clients[j].getStatus() == EXPECTING_NAME) // don't send to listener or sender or to
-														   // client that hasn't entered name yet
-				continue;
-			else
+			if (_clients[j].getStatus() == CONNECTED && j != _socket_listen && j != sender)
 				send(j, message, strlen(message), 0);
 		}
 	}
@@ -130,7 +131,7 @@ void Server::sendMessage() {
 	sprintf(formatted_message, "%s: %s\n", _name.c_str(), message);
 	for (int j = 1; j <= _max_socket; ++j) {
 		if (FD_ISSET(j, &_sets[WRITE]))
-			if (j != _socket_listen) {
+			if (j != _socket_listen && _clients[j].getStatus() == CONNECTED) {
 				int begin = 0;
 				int bytes_sent = 0;
 				while (bytes_sent < strlen(formatted_message)) {
@@ -160,8 +161,8 @@ void Server::announce(std::string msg, int exclude) {
 void Server::parseName(std::string name) {
 	if (name.size() == 0)
 		throw "\033[31mUsername cannot be empty :( try Again\n\033[0mUsername:";
-	if (name.size() < 1 || name.size() > 20)
-		throw "\033[31mUsername must be between 1 and 20 characters :( try "
+	if (name.size() < 3 || name.size() > 20)
+		throw "\033[31mUsername must be between 3 and 20 characters :( try "
 			  "Again\n\033[0mUsername:";
 	for (int i = 0; i < name.size(); ++i)
 		if (!isalnum(name[i]))
@@ -169,13 +170,12 @@ void Server::parseName(std::string name) {
 				  "Again\n\033[0mUsername:";
 	if (name == _name)
 		throw "\033[31mUsername already taken :( try Again\n\033[0mUserName:";
-	for (std::map<int, Client>::iterator it = _clients.begin(); it != _clients.end(); ++it)
-		if (it->second.getName() == name)
-			throw "\033[31mUsername already taken :( try "
-				  "Again\n\033[0mUserName:";
+	if (_db.userExists(name))
+		throw "\033[31mUsername already taken :( try "
+			  "Again\n\033[0mUserName:";
 }
 
-int Server::getClientName(int client) {
+int Server::get_client_new_name(int client) {
 	char name[1024];
 	int bytes_received = recv(client, name, 1024, 0);
 	if (bytes_received < 1) {
@@ -195,8 +195,111 @@ int Server::getClientName(int client) {
 		return 1;
 	}
 	_clients[client].setName(name);
-	announce(_clients[client].getName() + " has joined the chat!", client);
+	send(client, "Password:", 10, 0);
 	return 0;
+}
+
+int Server::get_client_new_password(int client) {
+	char password[1024];
+	int bytes_received = recv(client, password, 1024, 0);
+	if (bytes_received < 1) {
+		close(client);
+		FD_CLR(client, &_sets[MASTER]);
+		_clients.erase(client);
+		return 1;
+	}
+	bytes_received = bytes_received > 1024 ? 1024 : bytes_received;
+	password[bytes_received] = '\0';
+	if (bytes_received > 0 && password[bytes_received - 1] == '\n')
+		password[bytes_received - 1] = '\0';
+	if (strlen(password) < 6 || strlen(password) > 20) {
+		send(client,
+			 "\033[31mPassword must be between 6 and 20 characters :( try "
+			 "Again\n\033[0mPassword:",
+			 77, 0);
+		return 1;
+	}
+	_db.addUser(_clients[client].getName(), password);
+	send(client, "\033[32mAccount created successfully :)\nYou can chat now!\n\033[0m", 60, 0);
+	return 0;
+}
+
+int Server::get_client_login_name(int client) {
+	char name[1024];
+	int bytes_received = recv(client, name, 1024, 0);
+	if (bytes_received < 1) {
+		close(client);
+		FD_CLR(client, &_sets[MASTER]);
+		_clients.erase(client);
+		return 1;
+	}
+	bytes_received = bytes_received > 1024 ? 1024 : bytes_received;
+	name[bytes_received] = '\0';
+	if (bytes_received > 0 && name[bytes_received - 1] == '\n')
+		name[bytes_received - 1] = '\0';
+	if (strlen(name) == 0) {
+		send(client, "\033[31mUsername cannot be empty :( try Again\n\033[0mUsername:", 56, 0);
+		return 1;
+	}
+	if (strlen(name) < 3 || strlen(name) > 20) {
+		send(client, "\033[31mUsername must be between 3 and 20 characters :( try Again\n\033[0mUsername:", 83, 0);
+		return 1;
+	}
+	if (!_db.userExists(name)) {
+		send(client, "\033[31mUsername does not exist :( try Again\n\033[0mUsername:", 56, 0);
+		return 1;
+	}
+	_clients[client].setName(name);
+	send(client, "Password:", 10, 0);
+	return 0;
+}
+
+int Server::get_client_password(int client) {
+	char password[1024];
+	int bytes_received = recv(client, password, 1024, 0);
+	if (bytes_received < 1) {
+		close(client);
+		FD_CLR(client, &_sets[MASTER]);
+		_clients.erase(client);
+		return 1;
+	}
+	bytes_received = bytes_received > 1024 ? 1024 : bytes_received;
+	password[bytes_received] = '\0';
+	if (bytes_received > 0 && password[bytes_received - 1] == '\n')
+		password[bytes_received - 1] = '\0';
+	if (!_db.verifyPassword(_clients[client].getName(), password)) {
+		send(client, "\033[31mIncorrect password :( try Again\n\033[0mPassword:", 51, 0);
+		return 1;
+	}
+	send(client, "\033[32mLogged in successfully :)\nYou can chat now!\n\033[0m", 54, 0);
+	return 0;
+}
+
+void Server::get_client_option(int client) {
+	char option[1024];
+	int bytes_received = recv(client, option, 1024, 0);
+	if (bytes_received < 1) {
+		close(client);
+		FD_CLR(client, &_sets[MASTER]);
+		_clients.erase(client);
+	}
+	bytes_received = bytes_received > 1024 ? 1024 : bytes_received;
+	option[bytes_received] = '\0';
+	if (bytes_received > 0 && option[bytes_received - 1] == '\n')
+		option[bytes_received - 1] = '\0';
+	if (strcmp(option, "1") == 0) {
+		_clients[client].setStatus(EXPECTING_LOGIN_NAME);
+		send(client, "Username:", 9, 0);
+	} else if (strcmp(option, "2") == 0) {
+		_clients[client].setStatus(EXPECTING_NEW_NAME);
+		send(client, "Username:", 9, 0);
+	} else if (strcmp(option, "3") == 0) {
+		close(client);
+		FD_CLR(client, &_sets[MASTER]);
+		_clients.erase(client);
+	} else {
+		send(client, "Invalid option :( try Again\nOption:", 35, 0);
+	}
 }
 
 void Server::handleClient(int client) {
@@ -204,11 +307,24 @@ void Server::handleClient(int client) {
 	case CONNECTED:
 		receiveMessage(client);
 		break;
-	case EXPECTING_NAME:
-		if (!getClientName(client)) {
+	case IN_MENU:
+		get_client_option(client);
+		break;
+	case EXPECTING_LOGIN_NAME:
+		if (!get_client_login_name(client))
+			_clients[client].setStatus(EXPECTING_PASSWORD);
+		break;
+	case EXPECTING_PASSWORD:
+		if (!get_client_password(client))
 			_clients[client].setStatus(CONNECTED);
-			send(client, "Welcome to the chat!\n", 21, 0);
-		}
+		break;
+	case EXPECTING_NEW_NAME:
+		if (!get_client_new_name(client))
+			_clients[client].setStatus(EXPECTING_NEW_PASSWORD);
+		break;
+	case EXPECTING_NEW_PASSWORD:
+		if (!get_client_new_password(client))
+			_clients[client].setStatus(CONNECTED);
 		break;
 	}
 }
