@@ -1,7 +1,7 @@
 # chatUp (terimnal-based)
 ChatUp is a simple terminal-based chat application implemented in C++.
 It allows users to communicate with each other in real-time.
-![picture alt](https://github.com/ainzsoup/chatUp/blob/main/Screen%20Shot%202023-06-04%20at%204.53.28%20PM.png "Title is optional")
+![screenshot](https://github.com/ainzsoup/chatUp/blob/main/Screen%20Shot%202023-06-04%20at%204.53.28%20PM.png "Title is optional")
 
 ## Feautures
   * User Registraion: Users can create an account by registering with a username and password. The passwords are securely hashed using Libsodium library.
@@ -61,6 +61,9 @@ The application uses an SQLite database to store user information. The database 
 make drop
 ```
 this will remove the `ChatUp.db` file, and a new database will be created the next time you run the application.
+
+## Preview
+![preview](https://github.com/ainzsoup/chatUp/blob/main/chatUp_preview.gif)
 
 ## Contributing
 Contributions are welcome! If you have any ideas, suggestions, or bug reports, please open an issue or submit a pull request.
