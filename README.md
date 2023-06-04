@@ -1,6 +1,7 @@
 # chatUp (terimnal-based)
 ChatUp is a simple terminal-based chat application implemented in C++.
 It allows users to communicate with each other in real-time.
+![picture alt](https://github.com/ainzsoup/chatUp/blob/main/Screen%20Shot%202023-06-04%20at%204.53.28%20PM.png "Title is optional")
 
 ## Feautures
   * User Registraion: Users can create an account by registering with a username and password. The passwords are securely hashed using Libsodium library.
