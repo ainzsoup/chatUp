@@ -88,7 +88,7 @@ class Server {
 	void sendWelcomeMessage(int i);
 	void handleClient(int client);
 	void announce(std::string msg, int exclude);
-	void parseName(std::string name);
+	void parseName(std::string name, bool _new);
 	const int &getSocketListen() const;
 	const int &getMaxSocket() const;
 	const fd_set &getSets(int i) const;

@@ -144,7 +144,7 @@ void Server::sendMessage() {
 
 void Server::announce(std::string msg, int exclude) {
 	char message[2048];
-	sprintf(message, "\033[30;100m%s\033[0m\n", msg.c_str());
+	sprintf(message, "\033[38;5;147m%s\033[0m\n", msg.c_str());
 	for (int j = 1; j <= _max_socket; ++j) {
 		if (FD_ISSET(j, &_sets[WRITE]))
 			if (j != _socket_listen && j != exclude && _clients[j].getStatus() == CONNECTED) {
@@ -158,7 +158,7 @@ void Server::announce(std::string msg, int exclude) {
 	}
 }
 
-void Server::parseName(std::string name) {
+void Server::parseName(std::string name, bool _new) {
 	if (name.size() == 0)
 		throw "\033[31mUsername cannot be empty :( try Again\n\033[0mUsername:";
 	if (name.size() < 3 || name.size() > 20)
@@ -170,8 +170,11 @@ void Server::parseName(std::string name) {
 				  "Again\n\033[0mUsername:";
 	if (name == _name)
 		throw "\033[31mUsername already taken :( try Again\n\033[0mUserName:";
-	if (_db.userExists(name))
+	if (_new && _db.userExists(name))
 		throw "\033[31mUsername already taken :( try "
+			  "Again\n\033[0mUserName:";
+	else if (!_new && !_db.userExists(name))
+		throw "\033[31mUsername does not exist :( try "
 			  "Again\n\033[0mUserName:";
 }
 
@@ -189,7 +192,7 @@ int Server::get_client_new_name(int client) {
 	if (bytes_received > 0 && name[bytes_received - 1] == '\n')
 		name[bytes_received - 1] = '\0';
 	try {
-		parseName(name);
+		parseName(name, true);
 	} catch (const char *error) {
 		send(client, error, strlen(error), 0);
 		return 1;
@@ -221,6 +224,7 @@ int Server::get_client_new_password(int client) {
 	}
 	_db.addUser(_clients[client].getName(), password);
 	send(client, "\033[32mAccount created successfully :)\nYou can chat now!\n\033[0m", 60, 0);
+	announce(_clients[client].getName() + " joined the chat", client);
 	return 0;
 }
 
@@ -237,16 +241,11 @@ int Server::get_client_login_name(int client) {
 	name[bytes_received] = '\0';
 	if (bytes_received > 0 && name[bytes_received - 1] == '\n')
 		name[bytes_received - 1] = '\0';
-	if (strlen(name) == 0) {
-		send(client, "\033[31mUsername cannot be empty :( try Again\n\033[0mUsername:", 56, 0);
-		return 1;
+	try {
+		parseName(name, false);
 	}
-	if (strlen(name) < 3 || strlen(name) > 20) {
-		send(client, "\033[31mUsername must be between 3 and 20 characters :( try Again\n\033[0mUsername:", 83, 0);
-		return 1;
-	}
-	if (!_db.userExists(name)) {
-		send(client, "\033[31mUsername does not exist :( try Again\n\033[0mUsername:", 56, 0);
+	catch (const char *error) {
+		send(client, error, strlen(error), 0);
 		return 1;
 	}
 	_clients[client].setName(name);
@@ -272,6 +271,7 @@ int Server::get_client_password(int client) {
 		return 1;
 	}
 	send(client, "\033[32mLogged in successfully :)\nYou can chat now!\n\033[0m", 54, 0);
+	announce(_clients[client].getName() + " has joined the chat", client);
 	return 0;
 }
 
