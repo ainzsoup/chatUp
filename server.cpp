@@ -72,16 +72,18 @@ void Server::sendWelcomeMessage(int client) {
 	send(client, header.c_str(), header.size() + 1, 0);
 	std::string menu =
 		"Welcome to ChatUp!\n"
-		"Please choose an option:\n"
-		"1. Login\n"
-		"2. Register\n"
-		"3. Exit\n"
-		"Enter the option number: \n"
-		"Please go to this url to login: "
+		"To log in with your 42 account, please go to this url:\n"
+		"\033[38;5;44m]"
 		"https://api.intra.42.fr/oauth/"
 		"authorize?client_id=u-s4t2ud-4abbfeac4233b7388035477a7812d40f6e2b6765d3ce76263aa10532caec27d0&redirect_"
 		"uri=http%3A%2F%2F10.12.12.1%3A8080%2Fauth&response_type=code&state=" +
-		std::to_string(client) + "\n";
+		std::to_string(client) + "\n"
+		"\033[0m"
+		"To log in with a ChatUp account choose an option:\n"
+		"1. Login\n"
+		"2. Register\n"
+		"3. Exit\n"
+		"Enter the option number: \n";
 	send(client, menu.c_str(), menu.size() + 1, 0);
 }
 
