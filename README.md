@@ -16,19 +16,34 @@ Before running ChatUp, ensure that you have the following dependencies installed
   * Libsodium library
 
 ## Installation
-1. Clone the repository to your local machine:
+### Libsodium
+Before building and running ChatUp, you need to install the libsodium library. Follow the steps below:
+1. Navigate to the `libsodium-1.0.18` directory located at the root of the ChatUp repository:
 ```shell
-git clone git@github.com:ainzsoup/chatUp.git
+cd libsodium-1.0.18
 ```
-2. Navigate to the project directoty
+2. Configure the installation path by running the following command:
 ```shell
-cd ChatUp
+./configure --prefix=$(pwd)/../path
 ```
-2. Build the application using the provided Makefile:
+this command sets the installation prefix to the `path` directory located at the root of the repository.
+Adjust the path as needed.
+3. Build the library and run the tests:
+```shell
+make && make check
+```
+4. install the library:
+```shell
+make install
+```
+this command installs the Libsodium library to the specified installation prefix.
+
+### ChatUp
+1. Build the application using the provided Makefile:
 ```shell
 make
 ```
-3. run the application
+2. run the application
 ```shell
 ./chatup <port_number> <name>
 ```
@@ -38,15 +53,15 @@ Run the server application usin the following command:
 ```bash
 ./chatUp <port> <server_name>
 ```
-Replace "port" with the desired port number on which you want the server to listen for incoming connections.
-Replace "server_name" with a desired name that will show up to connected users in the chat when the server sends a message.
+Replace `port` with the desired port number on which you want the server to listen for incoming connections.
+Replace `server_name` with a desired name that will show up to connected users in the chat when the server sends a message.
 Example: ./chatUp 5000 server
 Open another terminal window or tab (separate from the one running the server).
 In the new terminal, use the nc command to connect to the server. The command should be in the following format:
 ```bash
  nc <server_ip_address> <server_port>
  ```
- Replace <server_ip_address> with the IP address of the machine running the chat server and <server_port> with the port number specified when starting the server.
+ Replace `server_ip_address` with the IP address of the machine running the chat server and `server_port` with the port number specified when starting the server.
  
 Example: nc 192.168.0.100 5000
  
