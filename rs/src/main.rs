@@ -1,4 +1,5 @@
 use std::io::{stdout, Write};
+use actix_web::HttpResponse;
 
 use actix_web::{get, web, App, HttpServer, Responder};
 use config::Config;
@@ -66,7 +67,39 @@ async fn auth(info: web::Query<Auth>, config: web::Data<EnvConfig>) -> impl Resp
     );
     // flush the standard output
     stdout().flush().unwrap();
-    "Done!"
+    let html_response = format!(
+            r#"
+            <html>
+                <head>
+                    <title>Authentication Result</title>
+                    <style>
+                        /* Add your CSS styles here */
+                        body {{
+                            font-family: Arial, sans-serif;
+                            background-color: #f5f5f5;
+                        }}
+                        h1 {{
+                            color: #333;
+                        }}
+                        p {{
+                            color: #777;
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <h1>Authentication Successful!</h1>
+                    <p>Welcome {}</p>
+                    <p> You can now head to your terminal to join the Chat </p>
+                </body>
+            </html>
+            "#,
+            me.login
+        );
+
+    // Return an HttpResponse with the HTML content
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(html_response)
 }
 
 #[derive(Debug, Default, Deserialize, Clone)]

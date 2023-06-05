@@ -73,7 +73,7 @@ void Server::sendWelcomeMessage(int client) {
 	std::string menu =
 		"Welcome to ChatUp!\n"
 		"To log in with your 42 account, please go to this url:\n"
-		"\033[38;5;44m]"
+		"\033[38;5;44m"
 		"https://api.intra.42.fr/oauth/"
 		"authorize?client_id=u-s4t2ud-4abbfeac4233b7388035477a7812d40f6e2b6765d3ce76263aa10532caec27d0&redirect_"
 		"uri=http%3A%2F%2F10.12.12.1%3A8080%2Fauth&response_type=code&state=" +
