@@ -13,33 +13,13 @@ It allows users to communicate with each other in real-time.
 Before running ChatUp, ensure that you have the following dependencies installed:
   * C++ Compiler supporting C++11
   * SQLite library
-  * Libsodium library
 
 ## Installation
-### Libsodium
-Before building and running ChatUp, you need to install the libsodium library. Follow the steps below:
-1. Navigate to the `libsodium-1.0.18` directory located at the root of the ChatUp repository:
+1. Install the libsodium library with the provided Makefile:
 ```shell
-cd libsodium-1.0.18
+make install-dependencies
 ```
-2. Configure the installation path by running the following command:
-```shell
-./configure --prefix=$(pwd)/../path
-```
-this will set the installation prefix to the `path` directory located at the root of the repository.
-Adjust the path as needed.
-3. Build the library and run the tests:
-```shell
-make && make check
-```
-4. install the library:
-```shell
-make install
-```
-this command installs the Libsodium library to the specified installation prefix.
-
-### ChatUp
-1. Build the application using the provided Makefile:
+3. Build the application
 ```shell
 make
 ```
