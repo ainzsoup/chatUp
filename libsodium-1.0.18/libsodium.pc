@@ -1,4 +1,4 @@
-prefix=/Users/sgamraou/chatUp/libsodium-1.0.18/../path
+prefix=/Users/sgamraou/chatUp/includes
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include

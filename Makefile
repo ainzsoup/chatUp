@@ -1,8 +1,10 @@
+INCLUDE = ${PWD}/includes/include 
+LIB = ${PWD}/includes/lib
 SRC = main.cpp server.cpp client.cpp database.cpp
 OBJ = $(SRC:.cpp=.o)
 EXE = chatUp
 CPP = c++
-CPPFLAGS = -std=c++11 -lsqlite3 -I/Users/sgamraou/chatUp/path/include -L/Users/sgamraou/chatUp/path/lib -lsodium
+CPPFLAGS = -std=c++11 -lsqlite3 -I$(INCLUDE) -L$(LIB) -lsodium
 
 RM = rm -f
 
@@ -14,6 +16,10 @@ $(EXE): $(OBJ)
 
 %.o: %.cpp
 	$(CPP) $(CPPFLAGS) -c $< -o $@
+
+install-dependencies:
+	# Install libsodium
+	mkdir -p includes && cd libsodium-1.0.18 && ./configure --prefix=$(PWD)/includes && make && make install && cd ..
 
 clean:
 	$(RM) $(OBJ)
