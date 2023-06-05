@@ -26,7 +26,7 @@ cd libsodium-1.0.18
 ```shell
 ./configure --prefix=$(pwd)/../path
 ```
-this command sets the installation prefix to the `path` directory located at the root of the repository.
+this will set the installation prefix to the `path` directory located at the root of the repository.
 Adjust the path as needed.
 3. Build the library and run the tests:
 ```shell
