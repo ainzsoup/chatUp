@@ -3,3 +3,4 @@ todo.txt
 test/
 .clangd
 ChatUp.db
+.env

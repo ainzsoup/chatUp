@@ -82,6 +82,8 @@ class Server {
 	void run(int ac, char **av);
 	void getReadyDescriptors(int timeout_sec, int timeout_usec);
 	void acceptConnection();
+	void addClient(int socket);
+	void removeClient(int socket);
 	void receiveMessage(int i);
 	void sendMessage();
 	void broadcastMessage(int sender, char *msg, int bytes_received);
@@ -98,6 +100,7 @@ class Server {
 	int get_client_new_name(int client);
 	int get_client_new_password(int client);
 	int get_client_password(int client);
+	std::map<int, Client> &getClients() ;
 
   private:
 	Database _db;

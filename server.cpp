@@ -27,7 +27,8 @@ void Server::setupSocket(char *port) {
 	_socket_listen = socket(bind_address->ai_family, bind_address->ai_socktype, bind_address->ai_protocol);
 	if (_socket_listen < 0)
 		throw std::runtime_error("socket() failed");
-
+	int optval = 1;
+	setsockopt(_socket_listen, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 	// binding socket to local bind_address
 	if (bind(_socket_listen, bind_address->ai_addr, bind_address->ai_addrlen))
 		throw std::runtime_error("bind() failed");
@@ -50,7 +51,7 @@ void Server::getReadyDescriptors(int timeout_sec, int timeout_usec) {
 	tv.tv_sec = timeout_sec;
 	tv.tv_usec = timeout_usec;
 
-	if (select(_max_socket + 1, &_sets[READ], &_sets[WRITE], 0, &tv) < 0)
+	if (select(_max_socket + 1, &_sets[READ], NULL, 0, NULL) < 0)
 		throw std::runtime_error("select() failed");
 }
 
@@ -62,17 +63,25 @@ const fd_set &Server::getSets(int i) const { return _sets[i]; }
 
 const std::string &Server::getName() const { return _name; }
 
+std::map<int, Client> &Server::getClients() { return _clients; }
+
 void Server::sendWelcomeMessage(int client) {
 	std::string header = HEADER;
 	header.insert(0, "\033[38;5;201m"); // blue
 	header.append("\033[0m\n");
 	send(client, header.c_str(), header.size() + 1, 0);
-	std::string menu = "Welcome to ChatUp!\n";
-	menu += "Please choose an option:\n";
-	menu += "1. Login\n";
-	menu += "2. Register\n";
-	menu += "3. Exit\n";
-	menu += "Enter the option number: \n";
+	std::string menu =
+		"Welcome to ChatUp!\n"
+		"Please choose an option:\n"
+		"1. Login\n"
+		"2. Register\n"
+		"3. Exit\n"
+		"Enter the option number: \n"
+		"Please go to this url to login: "
+		"https://api.intra.42.fr/oauth/"
+		"authorize?client_id=u-s4t2ud-4abbfeac4233b7388035477a7812d40f6e2b6765d3ce76263aa10532caec27d0&redirect_"
+		"uri=http%3A%2F%2F10.12.12.1%3A8080%2Fauth&response_type=code&state=" +
+		std::to_string(client) + "\n";
 	send(client, menu.c_str(), menu.size() + 1, 0);
 }
 
@@ -123,6 +132,14 @@ void Server::broadcastMessage(int sender, char *read, int bytes_received) {
 		}
 	}
 }
+
+void Server::addClient(int socket) {
+	FD_SET(socket, &_sets[MASTER]);
+	if (socket > _max_socket)
+		_max_socket = socket;
+}
+
+void Server::removeClient(int socket) { FD_CLR(socket, &_sets[MASTER]); }
 
 void Server::sendMessage() {
 	char message[1024];
@@ -243,8 +260,7 @@ int Server::get_client_login_name(int client) {
 		name[bytes_received - 1] = '\0';
 	try {
 		parseName(name, false);
-	}
-	catch (const char *error) {
+	} catch (const char *error) {
 		send(client, error, strlen(error), 0);
 		return 1;
 	}

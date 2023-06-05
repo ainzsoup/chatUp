@@ -9,7 +9,7 @@ CPPFLAGS = -std=c++11 -lsqlite3 -I$(INCLUDE) -L$(LIB) -lsodium
 RM = rm -f
 
 
-all: $(EXE)
+all: $(EXE) oauth_server
 
 $(EXE): $(OBJ)
 	$(CPP) $(CPPFLAGS) -o $(EXE) $(OBJ)
@@ -17,12 +17,15 @@ $(EXE): $(OBJ)
 %.o: %.cpp
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
+oauth_server:
+	cd rs && cargo build --release && cp target/release/rs ../oauth_server && cd ..
+
 install-dependencies:
 	# Install libsodium
 	mkdir -p includes && cd libsodium-1.0.18 && ./configure --prefix=$(PWD)/includes && make && make install && cd ..
 
 clean:
-	$(RM) $(OBJ)
+	$(RM) $(OBJ) oauth_server
 
 fclean: clean
 	$(RM) $(EXE)
