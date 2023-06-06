@@ -4,11 +4,12 @@ It allows users to communicate with each other in real-time.
 ![screenshot](https://github.com/ainzsoup/chatUp/blob/main/Screen%20Shot%202023-06-04%20at%204.53.28%20PM.png "Title is optional")
 
 ## Feautures
+  * Login with a 42 account (exclusively to users with valid Intra accounts. If you don't have an Intra account, you can still register and log in using the traditional account creation method.)
   * User Registraion: Users can create an account by registering with a username and password. The passwords are securely hashed using Libsodium library.
   * User Login: Registered users can log in to the application using their credentials.
   * Random Colors: When users join the chat, they are assigned random colors to distinguish their messages.
   * SQLite Database: The application uses an SQLite database to store user information, including usernames and hashed passwords.
-
+ 
 ## Prerequisites
 Before running ChatUp, ensure that you have the following dependencies installed:
   * C++ Compiler supporting C++11
