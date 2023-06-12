@@ -1,5 +1,5 @@
 # chatUp (terimnal-based)
-![logo](https://github.com/ainzsoup/chatUp/blob/main/logo-white.png)
+![logo](https://github.com/ainzsoup/chatUp/blob/main/ChatUplogo.png.png)
 ChatUp is a simple terminal-based chat application implemented in C++.
 It allows users to communicate with each other in real-time.
 
