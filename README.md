@@ -1,7 +1,8 @@
 # chatUp (terimnal-based)
+![logo](https://github.com/ainzsoup/chatUp/blob/main/logo-white.png)
 ChatUp is a simple terminal-based chat application implemented in C++.
 It allows users to communicate with each other in real-time.
-![screenshot](https://github.com/ainzsoup/chatUp/blob/main/Screen%20Shot%202023-06-04%20at%204.53.28%20PM.png "Title is optional")
+
 
 ## Feautures
   * Login with a 42 account (exclusively to users with valid Intra accounts. If you don't have an Intra account, you can still register and log in using the traditional account creation method.)
